@@ -193,16 +193,35 @@ class CategoricalToNumerical(BaseEstimator, TransformerMixin):
     def __init__(self, categorical_columns):
         self.categorical_columns = categorical_columns
         self.label_encoders = {col: LabelEncoder() for col in categorical_columns}
+        self.label_mappings = {}
 
     def fit(self, X, y=None):
+        # Fit the LabelEncoder for each categorical column
         for col in self.categorical_columns:
             self.label_encoders[col].fit(X[col])
+            # Store the label mapping for each column
+            self.label_mappings[col] = dict(zip(self.label_encoders[col].classes_, 
+                                                self.label_encoders[col].transform(self.label_encoders[col].classes_)))
+            print(f"Label mapping for '{col}': \n{self.label_mappings[col]}")
+            print(f"\n#######################################################\n")
         return self
 
     def transform(self, X):
+        X_copy = X.copy()  # Avoid modifying the original DataFrame
+        # Transform each categorical column using the fitted label encoder
         for col in self.categorical_columns:
-            X[col] = self.label_encoders[col].transform(X[col])
-        return X
+            X_copy[col] = self.label_encoders[col].transform(X[col])
+        return X_copy
+
+    def fit_transform(self, X, y=None):
+        self.fit(X, y)
+        return self.transform(X)
+
+    def get_label_mappings(self):
+        """Optional method to retrieve the label mappings outside the fit/transform methods"""
+        return self.label_mappings
+    
+    
 
 class NumericalStandardScaler(BaseEstimator, TransformerMixin):
     def __init__(self, numerical_columns):
