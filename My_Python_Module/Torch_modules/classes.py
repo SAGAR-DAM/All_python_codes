@@ -203,6 +203,139 @@ model = ConvolutionalNeuralNetwork(conv_layers=conv_layers,
 
 
 
+
+
+
+
+
+
+########################################################################################
+# Advanced Convolutional Neural network with custom modification
+########################################################################################
+class ConvolutionalNeuralNetwork(nn.Module):
+    def __init__(self, conv_layers, fc_layers_dims, in_channels, output_dimension, 
+                 pooling_types=None, pool_kernels=None, activations=None, 
+                 batch_norm=None, dropouts=None):
+        super(ConvolutionalNeuralNetwork, self).__init__()
+        
+        # Convolutional layers
+        self.conv_layers = nn.ModuleList()
+        current_channels = in_channels  # Number of input channels (e.g., 1 for grayscale, 3 for RGB)
+
+        for (out_channels, kernel_size, stride, padding) in conv_layers:
+            self.conv_layers.append(nn.Conv2d(current_channels, out_channels, kernel_size, stride, padding))
+            current_channels = out_channels  # Update the number of input channels for the next layer
+
+        # Pooling types and kernels
+        self.pooling_types = pooling_types if pooling_types else ["max"] * len(conv_layers)  # Default "max" pooling if not specified
+        self.pool_kernels = pool_kernels if pool_kernels else [2] * len(conv_layers)  # Default pooling kernel 2 if not specified
+        
+        # Check if pooling types and kernels length matches conv layers
+        if len(self.pool_kernels) != len(conv_layers) or len(self.pooling_types) != len(conv_layers):
+            raise ValueError("The number of pooling kernels and pooling types must match the number of conv layers")
+
+        # Batch normalization
+        self.batch_norm = batch_norm if batch_norm else [False] * len(conv_layers)  # Default no batch norm
+        self.bn_layers = nn.ModuleList([nn.BatchNorm2d(out_channels) if bn else None for bn, (out_channels, _, _, _) in zip(self.batch_norm, conv_layers)])
+
+        # Activation functions
+        self.activations = activations if activations else ["relu"] * len(conv_layers)  # Default ReLU activations
+        
+        # Dropout
+        self.dropouts = dropouts if dropouts else [0.0] * len(fc_layers_dims)  # Default no dropout in fully connected layers
+        self.dropout_layers = nn.ModuleList([nn.Dropout(p=drop) if drop > 0 else None for drop in self.dropouts])
+        
+        # Fully connected layers placeholder (input dimension will be calculated later)
+        self.fc_layers = nn.ModuleList()
+        self.fc_layer_dims = fc_layers_dims  # Store FC layer dimensions
+        self.output_dimension = output_dimension  # Output layer dimension (e.g., 10 for CIFAR-10)
+        self.fc_initialized = False  # We will initialize FC layers dynamically in the forward pass
+
+    def initialize_fc_layers(self, flattened_dim):
+        """Dynamically initializes fully connected layers based on the flattened output from conv layers."""
+        input_dim = flattened_dim  # Start with the flattened conv output size
+        for dim in self.fc_layer_dims:
+            self.fc_layers.append(nn.Linear(input_dim, dim))
+            input_dim = dim  # Update input size for next layer
+        self.output_layer = nn.Linear(input_dim, self.output_dimension)  # Final output layer
+        self.fc_initialized = True
+
+    def forward(self, x):
+        # Pass through convolutional layers
+        for idx, conv in enumerate(self.conv_layers):
+            x = conv(x)
+
+            # Apply batch normalization if specified
+            if self.bn_layers[idx] is not None:
+                x = self.bn_layers[idx](x)
+
+            # Apply activation function (customizable per layer)
+            if self.activations[idx] == "relu":
+                x = F.relu(x)
+            elif self.activations[idx] == "sigmoid":
+                x = torch.sigmoid(x)
+            elif self.activations[idx] == "tanh":
+                x = torch.tanh(x)
+            elif self.activations[idx] == "leaky_relu":
+                x = F.leaky_relu(x, negative_slope=0.01)
+            # Add more activations if needed
+
+            # Apply specific pooling type and kernel size for each layer
+            if self.pooling_types[idx] == "max":
+                x = F.max_pool2d(x, kernel_size=self.pool_kernels[idx])
+            elif self.pooling_types[idx] == "avg":
+                x = F.avg_pool2d(x, kernel_size=self.pool_kernels[idx])
+            elif self.pooling_types[idx] == "no":
+                pass  # No pooling
+
+        # Flatten the output of the conv layers
+        x = x.view(x.size(0), -1)
+
+        # Dynamically initialize fully connected layers based on flattened output size if not done already
+        if not self.fc_initialized:
+            self.initialize_fc_layers(flattened_dim=x.size(1))
+        
+        # Pass through fully connected layers
+        for idx, fc in enumerate(self.fc_layers):
+            x = F.relu(fc(x))  # Apply ReLU after each fully connected layer
+            
+            # Apply dropout if specified for this layer
+            if self.dropout_layers[idx] is not None:
+                x = self.dropout_layers[idx](x)
+        
+        # Output layer (no activation, as we use CrossEntropyLoss which applies softmax internally)
+        x = self.output_layer(x)
+        return x
+
+
+
+"""
+Example Use:
+conv_layers = [
+    (64, 3, 1, 1),  # 64 filters, 3x3 kernel, stride 1, padding 1
+    (128, 3, 1, 1),  # 128 filters, 3x3 kernel, stride 1, padding 1
+    (256, 3, 1, 1)   # 256 filters, 3x3 kernel, stride 1, padding 1
+]
+
+fc_layers_dims = [1024, 512, 256]  # Fully connected layers sizes
+
+# Custom options
+pool_kernels = [2, 2, 2]  # Pooling kernel sizes
+pooling_types = ["max", "avg", "max"]  # Pooling types
+activations = ["relu", "leaky_relu", "tanh"]  # Activations for each conv layer
+batch_norm = [True, True, False]  # Batch normalization for each conv layer
+dropouts = [0.5, 0.3, 0.2]  # Dropout for fully connected layers
+
+# Instantiate the model
+model = ConvolutionalNeuralNetwork(conv_layers, fc_layers_dims, in_channels=3, output_dimension=10, 
+                                   pooling_types=pooling_types, pool_kernels=pool_kernels, 
+                                   activations=activations, batch_norm=batch_norm, dropouts=dropouts)
+
+"""
+
+
+
+
 ########################################################################################
 # computer number of input layers for first fc
 ########################################################################################
