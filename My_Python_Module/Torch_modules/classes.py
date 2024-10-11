@@ -109,35 +109,58 @@ class FullyConnectedNeuralNetwork(nn.Module):
 # Class defined for Convolutional linear neural network
 #########################################################
 class ConvolutionalNeuralNetwork(nn.Module):
-    def __init__(self, conv_layers, fc_layers_dims, output_dimension):
+    def __init__(self, conv_layers, fc_layers_dims, in_channels, output_dimension, pooling_types=None, pool_kernels=None):
         super(ConvolutionalNeuralNetwork, self).__init__()
         
         # Convolutional layers
         self.conv_layers = nn.ModuleList()
-        in_channels = 1  # MNIST images are grayscale, so 1 input channel
+        current_channels = in_channels  # Number of input channels (e.g., 1 for grayscale, 3 for RGB)
         
         for (out_channels, kernel_size, stride, padding) in conv_layers:
-            self.conv_layers.append(nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding))
-            in_channels = out_channels  # Update the number of input channels for the next layer
+            self.conv_layers.append(nn.Conv2d(current_channels, out_channels, kernel_size, stride, padding))
+            current_channels = out_channels  # Update the number of input channels for the next layer
+
+        # Pooling types and kernels
+        self.pooling_types = pooling_types if pooling_types else ["max"] * len(conv_layers)  # Default "max" pooling if not specified
+        self.pool_kernels = pool_kernels if pool_kernels else [2] * len(conv_layers)  # Default pooling kernel 2 if not specified
         
-        # Fully connected layers
+        if len(self.pool_kernels) != len(conv_layers) or len(self.pooling_types) != len(conv_layers):
+            raise ValueError("The number of pooling kernels and pooling types must match the number of conv layers")
+
+        # Fully connected layers placeholder (input dimension will be calculated later)
         self.fc_layers = nn.ModuleList()
-        input_dim = fc_layers_dims[0]  # The size after flattening the convolutional layer output
-        for dim in fc_layers_dims[1:]:
+        self.fc_layer_dims = fc_layers_dims  # Store FC layer dimensions
+        self.output_dimension = output_dimension  # Output layer dimension (e.g., 10 for CIFAR-10)
+        self.fc_initialized = False  # We will initialize FC layers dynamically in the forward pass
+    
+    def initialize_fc_layers(self, flattened_dim):
+        """Dynamically initializes fully connected layers based on the flattened output from conv layers."""
+        input_dim = flattened_dim  # Start with the flattened conv output size
+        for dim in self.fc_layer_dims:
             self.fc_layers.append(nn.Linear(input_dim, dim))
-            input_dim = dim  # Update the input size for the next layer
-        
-        # Output layer
-        self.output_layer = nn.Linear(input_dim, output_dimension)
+            input_dim = dim  # Update input size for next layer
+        self.output_layer = nn.Linear(input_dim, self.output_dimension)  # Final output layer
+        self.fc_initialized = True
     
     def forward(self, x):
         # Pass through convolutional layers
-        for conv in self.conv_layers:
+        for idx, conv in enumerate(self.conv_layers):
             x = F.relu(conv(x))
-            x = F.max_pool2d(x, 2)  # Max pooling after each conv layer
-        
-        # Flatten the output of the conv layers for the fully connected layers
+            
+            # Apply specific pooling type and kernel size for each layer
+            if self.pooling_types[idx] == "max":
+                x = F.max_pool2d(x, kernel_size=self.pool_kernels[idx])
+            elif self.pooling_types[idx] == "avg":
+                x = F.avg_pool2d(x, kernel_size=self.pool_kernels[idx])
+            elif self.pooling_types[idx] == "no":
+                pass  # No pooling
+
+        # Flatten the output of the conv layers
         x = x.view(x.size(0), -1)
+
+        # Dynamically initialize fully connected layers based on flattened output size if not done already
+        if not self.fc_initialized:
+            self.initialize_fc_layers(flattened_dim=x.size(1))
         
         # Pass through fully connected layers
         for fc in self.fc_layers:
@@ -147,9 +170,100 @@ class ConvolutionalNeuralNetwork(nn.Module):
         x = self.output_layer(x)
         return x
 
+"""
+# Use:
+    
+# Define the conv layers as specified
+conv_layers = [
+    (16, 4, 1, 1),  # Conv layer 1: 16 filters, 4x4 kernel, stride 1, padding 1
+    (32, 3, 1, 0),  # Conv layer 2: 32 filters, 3x3 kernel, stride 1, padding 0
+    (64, 4, 1, 0),  # Conv layer 3: 64 filters, 4x4 kernel, stride 1, padding 0
+]
+pool_kernels = [2, 2, 2]  # Different pooling kernels for each layer
+pooling_types = ["no","max","avg"]  # Different pooling types for each layer
+
+
+# Define fully connected layers
+fc_layers_dims = [512, 256, 128] # excludind first layer (output_of_conv -> input_on_fc)
+output_dimension=len(set(y_train))
+
+# Instantiate the model
+model = ConvolutionalNeuralNetwork(conv_layers=conv_layers,
+                                   fc_layers_dims=fc_layers_dims,
+                                   in_channels=image_channel,
+                                   output_dimension=output_dimension, 
+                                   pooling_types=pooling_types, 
+                                   pool_kernels=pool_kernels)
+
+"""
 
 
 
+
+
+
+
+########################################################################################
+# computer number of input layers for first fc
+########################################################################################
+def compute_conv_to_fc_input_dim(conv_layers, pooling_types, pool_kernels, input_size):
+    """
+    Computes the input dimension for the first fully connected layer.
+    
+    Parameters:
+        conv_layers (list of tuples): Each tuple contains (out_channels, kernel_size, stride, padding) for each conv layer.
+        pooling_types (list of str): List of pooling types for each layer ('max', 'avg', 'no').
+        pool_kernels (list of int): List of pooling kernel sizes for each layer.
+        input_size (tuple): Input size as (batch_size, channels, height, width).
+
+    Returns:
+        int: The input dimension for the first fully connected layer.
+    """
+    
+    # Initialize dimensions
+    batch_size, channels, height, width = input_size
+
+    # Process each convolutional layer
+    for idx, (out_channels, kernel_size, stride, padding) in enumerate(conv_layers):
+        # Apply convolution
+        height = (height + 2 * padding - kernel_size) // stride + 1
+        width = (width + 2 * padding - kernel_size) // stride + 1
+
+        # Apply pooling if specified
+        if pooling_types[idx] != "no":
+            height = (height - pool_kernels[idx]) // pool_kernels[idx] + 1
+            width = (width - pool_kernels[idx]) // pool_kernels[idx] + 1
+
+        # Update channels
+        channels = out_channels
+
+    # The output of the final conv layer needs to be flattened for the FC layer
+    return channels * height * width  # Total flattened dimension
+
+"""
+# Use: 
+# Example input dimensions: (batch_size, channels, height, width)
+input_size = (1, 3, 32, 32)  # Example for CIFAR with 3 channels and 32x32 size
+
+# Define the conv layers as specified
+conv_layers = [
+    (64, 2, 1, 0),  # Conv layer 1: 16 filters, 4x4 kernel, stride 1, padding 1
+    (128, 2, 1, 0),  # Conv layer 2: 32 filters, 3x3 kernel, stride 1, padding 0
+    (128, 2, 1, 0),  # Conv layer 3: 64 filters, 4x4 kernel, stride 1, padding 0
+    (256, 2, 1, 0), 
+    (256, 2, 1, 0),
+    (512, 2, 1, 0)
+]
+
+
+pooling_types = ["no","max","avg","max","max","max"]  # Different pooling types for each layer
+pool_kernels = [1,1,2,1,2,2]  # Different pooling kernels for each layer
+
+
+# Compute the input dimension for the first fully connected layer
+fc_input_dim = compute_conv_to_fc_input_dim(conv_layers, pooling_types, pool_kernels, input_size)
+print(f"The input dimension for the first fully connected layer is: {fc_input_dim}")
+"""
 
 
 
@@ -264,7 +378,16 @@ class TorchPipeline:
 
         return all_predictions, accuracy
 
+"""
+# Use:
 
+# Create the pipeline object
+torchpipeline = TorchPipeline(model=model, 
+                         criterion=criterion, 
+                         optimizer=optimizer, 
+                         batch_size=batch_size, 
+                         epochs=epochs)
+"""
 
 
 
@@ -300,22 +423,23 @@ def get_numerical_categorical_boolean_columns(data):
     boolean_columns = []
     
     for name in np.array(data.columns):
-        i=0
-        while(data[name][i] is None):
+        i = 0
+        # Using .iloc to index by position and avoid the KeyError
+        while pd.isnull(data[name].iloc[i]):  # Handle None/NaN entries properly
             i += 1
-
-        if(type(data[name][i]) is str):
+        
+        # Now we determine the type of the first valid value
+        first_value = data[name].iloc[i]
+        
+        if isinstance(first_value, str):
             categorical_columns.append(name)
-        elif((type(data[name][i]) is float) or (type(data[name][i]) is int) or (type(data[name][i]) is bin) or (type(data[name][i]) is np.int64) 
-            or (type(data[name][i]) is np.int32) or (type(data[name][i]) is np.int16) or (type(data[name][i]) is np.int8) or 
-            (type(data[name][i]) is np.float16) or (type(data[name][i]) is np.float32) or (type(data[name][i]) is np.float64)):
-            
+        elif isinstance(first_value, (int, float, np.integer, np.floating)):
             numerical_columns.append(name)
-        elif((type(data[name][i]) is bool)):
-             boolean_columns.append(name)
-        else:
-            pass
+        elif isinstance(first_value, bool):
+            boolean_columns.append(name)
+    
     return numerical_columns, categorical_columns, boolean_columns
+
 
 
 
@@ -430,3 +554,8 @@ class NumericalNormalizedScaler(BaseEstimator, TransformerMixin):
         for col in self.numerical_columns:
             X_copy[col] = self.scalers[col].transform(X[[col]])
         return X_copy
+    
+    
+    
+    
+    
