@@ -51,7 +51,7 @@ import torchvision.datasets as datasets
 import torchvision.transforms as transformers
 from torch.utils.data import Dataset
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+#device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
 import matplotlib as mpl
@@ -594,7 +594,7 @@ class ConvolutionalAdvancedNeuralNetwork_With_GPU(nn.Module):
 
     def forward(self, x):
         # Moe the data to right device:
-        x = x.to(device)
+        x = x.to(self.device)
 
         # Pass through convolutional layers
         for idx, conv in enumerate(self.conv_layers):
