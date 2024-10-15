@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from ucimlrepo import fetch_ucirepo 
 import pandas as pd
 import glob
+import math
 # from Curve_fitting_with_scipy import Gaussianfitting as Gf
 # from Curve_fitting_with_scipy import Linefitting as Lf
 from scipy.signal import fftconvolve
@@ -668,6 +669,135 @@ dropouts = [0.0, 0.0, 0.15, 0.1, 0.2, 0.0]  # Dropout for fully connected layers
 output_dimension = 10 #len(set(np.array(y_train.cpu())))
 """
 
+
+
+
+
+
+
+
+
+
+###########################################################################################
+# VGG16 customized model for torch
+###########################################################################################
+class CustomVGG16(nn.Module):
+    def __init__(self, input_channels, num_classes, input_shape, last_conv_layer_output_shape=None, dropout_rate=0.2):
+        """
+        parameters:
+        input_channels: input image channel. Like 3 for RGB image, 1 for grayscale image
+        num_classes: number of output classes. 10 for MNIST/CIFAR10; 100 for CIFAR100... etc
+        input_shape: input image shape. (28,28) for MNIST, (32,32) for CIFAR
+        last_conv_layer_output_shape: last conv_layer output shape (3x3 will give 3x3 images with given channels. 1x1 will give 1x1 image with given channels... etc).
+                                      The shape will be calculated automatically based on adaptive average pooling. Generally for all Maxpool operation without the
+                                      adaptive pool operation the 32x32 image will become 1x1 with 512 channels. The adaptivepool will make that averaged out over the given shape.
+                    
+        dropout_rate: dropout rates of the fully connected layers. default: 20%
+        """
+        
+        super(CustomVGG16, self).__init__()
+        self.input_channels = input_channels
+        self.input_height, self.input_width = input_shape
+        self.last_conv_output_shape = last_conv_layer_output_shape
+        self.dropout_rate = dropout_rate
+        self.num_classes = num_classes
+
+        # Define the convolutional layers
+        self.features = nn.ModuleList([
+            # Block 1
+            nn.Conv2d(input_channels, 64, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+
+            # Block 2
+            nn.Conv2d(64, 128, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(128, 128, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+
+            # Block 3
+            nn.Conv2d(128, 256, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(256, 256, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(256, 256, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+
+            # Block 4
+            nn.Conv2d(256, 512, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(512, 512, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(512, 512, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+
+            # Block 5
+            nn.Conv2d(512, 512, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(512, 512, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(512, 512, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+        ])
+
+        # Final pooling layer
+        if last_conv_layer_output_shape is not None:
+            self.final_pool = nn.AdaptiveAvgPool2d(last_conv_layer_output_shape)
+            num_features_in_first_fc = 512 * last_conv_layer_output_shape[0] * last_conv_layer_output_shape[1]
+        else:
+            self.final_pool = nn.Identity()  # No custom final pooling
+            num_features_in_first_fc = self.calculate_conv_output_size()
+
+        # Find the nearest power of 2 to num_features
+        nearest_power_of_2 = 2 ** int(math.log2(num_features_in_first_fc))
+
+        # Define the fully connected layers
+        self.classifier = nn.Sequential(
+            nn.Linear(num_features_in_first_fc, max([nearest_power_of_2,num_classes])),
+            nn.ReLU(inplace=True),
+            nn.Dropout(p=dropout_rate),
+            nn.Linear(nearest_power_of_2, max([int(nearest_power_of_2/4),num_classes])),
+            nn.ReLU(inplace=True),
+            nn.Dropout(p=dropout_rate),
+            nn.Linear(max([int(nearest_power_of_2/4),num_classes]), num_classes),
+        )
+
+    def calculate_conv_output_size(self):
+        """Helper function to calculate the output size after conv layers"""
+        x = torch.randn(1, self.input_channels, self.input_height, self.input_width)  # Dummy input
+        x = self.conv_forward(x)
+        return x.numel()  # Flattened size of the conv output
+
+    def conv_forward(self, x):
+        """Forward pass through conv layers"""
+        for layer in self.features:
+            x = layer(x)
+            # Apply adaptive pooling if necessary
+            if isinstance(layer, nn.MaxPool2d) and (x.size(2) < 2 or x.size(3) < 2):
+                x = nn.AdaptiveAvgPool2d((max(2, x.size(2)), max(2, x.size(3))))(x)
+        return x
+
+    def forward(self, x):
+        # Forward through conv layers
+        x = self.conv_forward(x)
+        # Apply final pooling if specified
+        x = self.final_pool(x)
+        # Flatten for FC layers
+        x = torch.flatten(x, 1)
+        # Pass through fully connected layers
+        x = self.classifier(x)
+        return x
+
+"""
+Example usage:
+model = CustomVGG16(input_channels=3, num_classes=10, input_shape=(32, 32), last_conv_layer_output_shape=(1,1))
+print(model)
+"""
 
 
 
