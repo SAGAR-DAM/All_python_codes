@@ -23,18 +23,18 @@ mpl.rcParams['font.weight'] = 'bold'
 t_start=time.time()
 def create_random_root(n):
     root=[]
-    Re=np.random.uniform(low=-1,high=1,size=n)
-    Im=np.random.uniform(low=-1,high=1,size=n)
+    Re=np.random.uniform(low=-0.5,high=0.5,size=n)
+    Im=np.random.uniform(low=-0.5,high=0.5,size=n)
     for i in range(n):
         root.append(Re[i]+Im[i]*1j)
     return(root)
 
 
-
+#root = [-1,0,1]
 #root = [0.5+0.35j, -0.9+0.35j,-0.45-0.4125j,-0.4+0.9j,0.65-0.48j]
 #root = [0.5*np.exp(1j * i * 2 * np.pi / 4) for i in range(4)]
 root=create_random_root(5)
-
+res=200
 iteration = 50
 root=np.array(root)
 colors = np.linspace(0, 1, len(root))
@@ -71,10 +71,9 @@ def colour_the_complex_plane(z, root, colors):
     output = colors[nearest]
     return output
 
-res=300
 
-x = np.linspace(-max(abs(root.real))*1.1,max(abs(root.real))*1.1,int(2*res*(max(abs(root.real))+1)))
-y = np.linspace(-max(abs(root.imag))*1.1,max(abs(root.imag))*1.1,int(2*res*(max(abs(root.imag))+1)))
+x = np.linspace(-0.2-max(abs(root.real))*1.1,0.2+max(abs(root.real))*1.1,int(2*res*(max(abs(root.real))+1)))
+y = np.linspace(-0.2-max(abs(root.imag))*1.1,0.2+max(abs(root.imag))*1.1,int(2*res*(max(abs(root.imag))+1)))
 
 X, Y = np.meshgrid(x, y)
 z = X + Y * 1j
