@@ -30,11 +30,11 @@ def create_random_root(n):
     return(root)
 
 
-#root = [-1,0,1]
-#root = [0.5+0.35j, -0.9+0.35j,-0.45-0.4125j,-0.4+0.9j,0.65-0.48j]
-#root = [0.5*np.exp(1j * i * 2 * np.pi / 4) for i in range(4)]
-root=create_random_root(5)
-res=200
+# root = [0,1,1j,-1j,0.5+0.5j,0.5-0.5j]
+# root = [0.5+0.35j, -0.9+0.35j,-0.45-0.4125j,-0.4+0.9j,0.65-0.48j]
+# root = [0.5*np.exp(1j * i * 2 * np.pi / 4) for i in range(4)]
+root=create_random_root(7)
+res=350
 iteration = 50
 root=np.array(root)
 colors = np.linspace(0, 1, len(root))
@@ -115,7 +115,7 @@ for i in range(len(root)):
         plt.scatter(root[i].real,root[i].imag, color='red', marker='o')
         plt.text(root[i].real,root[i].imag, r'z$_{%d}$'%(1+i), color="white", fontsize=10, ha='left', va='bottom')
 plt.title(r"NEWTON'S FRACTAL $\ \ by\ \$\alpha\widetilde g\alpha R$", fontname="Times New Roman", fontsize=10)
-plt.grid(color="blue",linewidth=0.5)
+plt.grid(color="k",linewidth=0.5)
 plt.xlabel("Re(z)",fontsize=7)
 plt.ylabel("Im(z)",fontsize=7)
 plt.xticks(fontsize=7)
