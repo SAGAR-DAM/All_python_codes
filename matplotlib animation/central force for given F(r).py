@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Oct 22 23:24:01 2024
+Created on Fri Nov 15 16:02:58 2024
 
 @author: mrsag
 """
@@ -16,17 +16,19 @@ m2 = 1.0  # mass of the moving object
 mu = (m1 * m2) / (m1 + m2)  # reduced mass
 
 # Define the central force F(r)
+# Define the central force F(r)
 def F(r):
     k = 1.0  # strength of the force
     # grav_force = -k/r**2
-    # perturbed_grav_force = -k/r**2 - 1*k/r
+    perturbed_grav_force = -k/r**2 - 0.0*k/r
     # inverse_r_force = -k/r
     # exponential_force = -k*np.exp(-r)
     # log_force = -k/(1+np.log(r))
     # const_force = -k
     # spring_force = -k*r
-    strange_force = -k*r**2
-    return strange_force
+    # strange_force = -k*r**2
+    return perturbed_grav_force
+
 
 # Define the equations of motion for the reduced mass system
 def equations(t, y):
@@ -37,12 +39,12 @@ def equations(t, y):
 
 # Initial conditions
 r0 = 2.0         # initial radial distance
-r_dot0 = 0.2    # initial radial velocity
+r_dot0 = 0.2     # initial radial velocity
 theta0 = 0.0     # initial angle
 y0 = [r0, r_dot0, theta0]
 
 # Set initial angular momentum
-h = 1.0  # angular momentum (constant in central force problems)
+h = 0.85  # angular momentum (constant in central force problems)
 
 # Time span for the simulation
 t_max = 400
@@ -78,7 +80,9 @@ def init():
 
 # Update function for the animation
 def update(frame):
-    moving_body.set_data(x[frame], y[frame])
+    # Ensure frame is within bounds
+    frame = min(frame, len(x) - 1)
+    moving_body.set_data([x[frame]], [y[frame]])  # Provide lists or arrays
     line.set_data(x[:frame], y[:frame])
     return moving_body, line
 

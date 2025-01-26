@@ -33,5 +33,5 @@ gradient_array = np.array(gradient_list).reshape(len(gradient_list), 1, 3) / 255
 # Display the gradient as an image
 plt.figure(figsize=(10, 2))  # Set figure size
 plt.imshow(gradient_array, aspect='auto')
-plt.axis('off')  # Hide the axis
+# plt.axis('off')  # Hide the axis
 plt.show()

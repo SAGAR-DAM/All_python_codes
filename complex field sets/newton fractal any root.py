@@ -32,8 +32,8 @@ def create_random_root(n):
 
 # root = [0,1,1j,-1j,0.5+0.5j,0.5-0.5j]
 # root = [0.5+0.35j, -0.9+0.35j,-0.45-0.4125j,-0.4+0.9j,0.65-0.48j]
-# root = [0.5*np.exp(1j * i * 2 * np.pi / 4) for i in range(4)]
-root=create_random_root(7)
+root = [0.5*np.exp(1j * i * 2 * np.pi / 6) for i in range(6)]
+# root=create_random_root(7)
 res=350
 iteration = 50
 root=np.array(root)

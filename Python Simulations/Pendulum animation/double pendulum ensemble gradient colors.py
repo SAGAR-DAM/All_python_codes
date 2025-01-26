@@ -42,7 +42,7 @@ cyan=(0,255,255)
 
 
 # Define the number of colors we want in each gradient segment
-n_colors = 250  # At least 4000 total colors, so we use 1000 per segment
+n_colors = 125  # At least 4000 total colors, so we use 1000 per segment
 
 # Generate colors for each segment using numpy linspace
 # Segment 1: Blue to Cyan (0, 0, 255) -> (0, 255, 255)
@@ -108,7 +108,7 @@ class double_pendulum:
 ##########################################################################################
 ##########################################################################################
 
-number_of_pend=1000
+number_of_pend = n_colors*4
 s = np.linspace(np.pi-0.0001, np.pi+0.0001, number_of_pend)
 
 p=[]  # blank list o add pendulums
@@ -188,8 +188,8 @@ while running:
     
         pygame.draw.line(screen, colors[i%len_c], pivot, (pendulum1_x, pendulum1_y), 1)
         pygame.draw.line(screen, colors[i%len_c], (pendulum1_x, pendulum1_y), (pendulum2_x, pendulum2_y), 1)
-        pygame.draw.circle(screen, colors[-(i+1)%len_c], (int(pendulum1_x), int(pendulum1_y)), 10)
-        pygame.draw.circle(screen, colors[-(i+1)%len_c], (int(pendulum2_x), int(pendulum2_y)), 10)
+        pygame.draw.circle(screen, colors[-(i+1)%len_c], (int(pendulum1_x), int(pendulum1_y)), 7)
+        pygame.draw.circle(screen, colors[-(i+1)%len_c], (int(pendulum2_x), int(pendulum2_y)), 7)
         
     if (savegif==True):
         pygame_image = pygame.surfarray.array3d(screen)
@@ -208,7 +208,7 @@ if(savegif==True):
 
 
 pygame.quit()
-sys.exit()
+# sys.exit()
 
 for __var__ in dir():
     exec('del '+ __var__)

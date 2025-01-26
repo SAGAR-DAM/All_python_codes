@@ -187,7 +187,7 @@ if(savegif==True):
 
 
 pygame.quit()
-sys.exit()
+# sys.exit()
 
 for __var__ in dir():
     exec('del '+ __var__)
