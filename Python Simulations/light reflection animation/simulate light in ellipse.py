@@ -92,16 +92,18 @@ def run_simulation_ellipse(ellipse_radii, light_source, angle, num_reflect,anims
     # Animation function
     def update(frame):
         if frame < len(points_x):
-            line.set_data(points_x[:frame+1], points_y[:frame+1])
-        plot_source.set_data(light_source[0], light_source[1])
-        plot_focus.set_data([np.sqrt(ellipse_radii[0]**2-ellipse_radii[1]**2),-np.sqrt(ellipse_radii[0]**2-ellipse_radii[1]**2)],[0,0])
+            line.set_data(points_x[:frame+1], points_y[:frame+1])  # Update line data
+        plot_source.set_data([light_source[0]], [light_source[1]])
+        # plot_focus.set_data([np.sqrt(ellipse_radii[0]**2-ellipse_radii[1]**2),-np.sqrt(ellipse_radii[0]**2-ellipse_radii[1]**2)],[0,0])
+        plot_focus.set_data([np.sqrt(ellipse_radii[0]**2-ellipse_radii[1]**2), -np.sqrt(ellipse_radii[0]**2-ellipse_radii[1]**2)],[0, 0])
+
         return line, plot_source, plot_focus
 
     # Create animation
     # Set the frame rate to 30 frames per second
     frame_rate = 30
     interval = 1000 / frame_rate  # Calculate interval in milliseconds
-    animation = FuncAnimation(fig, update, frames=len(points_x)+1, interval=interval, blit=True)
+    animation = FuncAnimation(fig, update, frames=len(points_x)+1, interval=interval, blit=False)
     
     if (animsave==True):
         animation.save('D:\\Codes\\matplotlib animation\\ellipse animation 2.gif', writer='pillow')
@@ -111,7 +113,7 @@ def run_simulation_ellipse(ellipse_radii, light_source, angle, num_reflect,anims
     
     
 # Define the room and light source
-ellipse_radii = np.array([10,10])  # Radii of the ellipse
+ellipse_radii = np.array([10,5])  # Radii of the ellipse
 light_source = np.array([np.sqrt(ellipse_radii[0]**2-ellipse_radii[1]**2)-5,2])  # Position of the light source
 angle = 10
 num_reflect = 200
