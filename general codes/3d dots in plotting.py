@@ -18,7 +18,6 @@ image_path = "C:\\Users\\mrsag\\OneDrive\\Desktop\\3d balls.png"
 dot_image = mpimg.imread(image_path)
 
 # Generate random data
-np.random.seed(42)
 x = np.linspace(0,10,20)
 y = np.sin(x)
 
