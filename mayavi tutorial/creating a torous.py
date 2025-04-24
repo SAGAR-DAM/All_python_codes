@@ -27,6 +27,6 @@ mlab.plot3d(zx,zy+lensoffset,zz,line_width=0.01,tube_radius=0.01)
 mlab.plot3d(xx,xy+lensoffset,xz,line_width=0.01,tube_radius=0.01)
 mlab.mesh(x,y,z,representation='fancymesh')
 
-for __var__ in dir():
-    exec('del '+ __var__)
-    del __var__
+# for __var__ in dir():
+#     exec('del '+ __var__)
+#     del __var__

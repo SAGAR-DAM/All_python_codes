@@ -35,7 +35,7 @@ B=0.1
 Height = 30
 
 #Height of collimator to IP surfac in mm
-HeightIP = 40
+HeightIP = 31
 
 #Resolution of scanner in micron
 Resolution = 25
@@ -297,9 +297,10 @@ Spectrum = np.column_stack((Energy, NetSig, NoiseSig))
 
 plt.figure()
 plt.plot(Energy,NetSig,color='red')  
-plt.plot(Energy,NoiseSig,color='blue')
+# plt.plot(Energy,NoiseSig,color='blue')
 # plt.yscale('log')
-plt.xlim(0,1.5)
+plt.xscale("log")
+# plt.xlim(0,1.5)
 #plt.ylim(0,4e9)
 plt.xlabel('Energy (MeV)')
 plt.ylabel('d2N/dOmegadE')
