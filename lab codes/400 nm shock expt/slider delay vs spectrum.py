@@ -1,0 +1,283 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Feb  7 11:24:13 2024
+
+@author: mrsag
+"""
+
+import numpy as np
+import matplotlib.pyplot as plt
+import glob
+from Curve_fitting_with_scipy import Gaussianfitting as Gf
+from scipy.signal import fftconvolve
+from matplotlib.widgets import Slider
+from matplotlib.colors import Normalize
+import random
+
+import matplotlib as mpl
+
+
+mpl.rcParams['font.family'] = 'serif'
+mpl.rcParams['font.serif'] = 'Times New Roman'
+mpl.rcParams['font.size'] = 8
+#mpl.rcParams['font.weight'] = 'bold'
+#mpl.rcParams['font.style'] = 'italic'  # Set this to 'italic'
+mpl.rcParams['figure.dpi']=300 # highres display
+
+c = 0.3   #in mm/ps
+min_wavelength=400
+max_wavelength=420
+
+def find_index(array, value):
+    # Calculate the absolute differences between each element and the target value
+    absolute_diff = np.abs(array - value)
+    
+    # Find the index of the minimum absolute difference
+    index = np.argmin(absolute_diff)
+    
+    return index
+
+
+def moving_average(signal, window_size):
+    # Define the window coefficients for the moving average
+    window = np.ones(window_size) / float(window_size)
+    
+    # Apply the moving average filter using fftconvolve
+    filtered_signal = fftconvolve(signal, window, mode='valid')
+    
+    return filtered_signal
+
+
+def find_w0_std(filepath):
+    files = glob.glob(filepath)
+    p = []
+
+    
+    for i in range(len(files)):
+        f = open(files[i])
+        r=np.loadtxt(f,skiprows=17,comments='>')
+        
+        wavelength = r[:,0]
+        intensity = r[:,1]
+        intensity /= max(intensity)
+        
+        minw = find_index(wavelength, 400)
+        maxw = find_index(wavelength, 420)
+        
+        wavelength = wavelength[minw:maxw]
+        intensity = intensity[minw:maxw] 
+        
+        intensity -= np.mean(intensity[0:50])
+        
+        base_error = np.max(intensity[:100])#-np.min(intensity[:100])
+        for w in wavelength:
+            if (w<412 or w>415) and find_index(wavelength,w)>base_error:
+                intensity[find_index(wavelength,w)] = random.uniform(-base_error,base_error)
+        
+        # intensity /= max(intensity)
+        fit_I,parameters,string = Gf.Gaussfit(wavelength, intensity)
+        
+        
+        error = np.std(fit_I-intensity)
+        
+        if(error<0.5 and max(fit_I)>0.2):
+            p.append(parameters[1])
+    #         plt.plot(wavelength, intensity)
+    #         plt.plot(wavelength, fit_I,'-')
+            
+    # plt.title(filepath[85:-5])
+    # plt.xlim(410,416)
+    # plt.show()
+            
+    if(len(p)>0):
+        peak_w0 = np.mean(p)
+        std_w = np.std(p)
+        
+    return peak_w0, std_w
+
+
+
+pr_only = "D:\\data Lab\\400 vs 800 doppler experiment\\400 pump 400 probe\\05012025 400 nm 135 mJ\\all delays\\pr only\\*.txt"    
+
+peak_pr_only, std_pr_only = find_w0_std(pr_only)
+
+delays = np.array(sorted([28.9,29.65,29.95,30.4,30.7,30.25,30.55,30.85,31.6,31.15,31.45,31.75,32.65,33.4,34.9,36.4]))
+time_delay = (delays-30.4)*2/c
+
+
+peaks = []
+fit_I_arr = []
+raw_data_arr = []
+errors = []
+
+for i in range(len(delays)):
+    delay = delays[i]
+    print(delay)
+    filepath = f"D:\\data Lab\\400 vs 800 doppler experiment\\400 pump 400 probe\\05012025 400 nm 135 mJ\\all delays\\{delay}\\*.txt"
+    
+    peak, std = find_w0_std(filepath)
+    
+    peaks.append(peak)
+    errors.append(max([std,std_pr_only]))
+    
+peaks = np.array(peaks)
+
+for i in range(len(delays)):
+    delay = delays[i]
+    print(delay)
+    filepath = f"D:\\data Lab\\400 vs 800 doppler experiment\\400 pump 400 probe\\05012025 400 nm 135 mJ\\all delays\\{delay}\\*.txt"
+    files = glob.glob(filepath)
+    raw = []
+    fit = []
+    counter = 0
+    for i in range(0,len(files)):
+        f = open(files[i])
+        r=np.loadtxt(f,skiprows=17,comments='>')
+        
+        wavelength = r[:,0]
+        intensity = r[:,1]
+        intensity -= np.mean(intensity[0:200])
+        
+        minw = find_index(wavelength, min_wavelength)
+        maxw = find_index(wavelength, max_wavelength)
+        
+        wavelength = wavelength[minw:maxw]
+        intensity = intensity[minw:maxw] 
+        intensity /= max(intensity)
+        
+        fit_I,parameters,string = Gf.Gaussfit(wavelength, intensity)
+        error = np.std(fit_I-intensity)
+        
+        base_error = np.max(intensity[:100])#-np.min(intensity[:100])
+        for w in wavelength:
+            if (w<412 or w>415) and find_index(wavelength,w)>base_error:
+                intensity[find_index(wavelength,w)] = random.uniform(-base_error,base_error)
+        
+        # intensity /= max(intensity)
+        fit_I,parameters,string = Gf.Gaussfit(wavelength, intensity)
+        
+        
+        error = np.std(fit_I-intensity)
+        
+        if(error<0.5 and max(fit_I)>0.4):
+            raw.append(intensity)
+            fit.append(fit_I)
+            counter += 1
+    raw = np.array(raw)
+    fit = np.array(fit)
+    
+    raw = np.sum(raw, axis=0)
+    fit = np.sum(fit, axis=0)
+    
+    raw /= counter
+    fit /= counter
+    
+    raw_data_arr.append(raw)
+    fit_I_arr.append(fit)   
+
+
+
+
+
+
+
+fig, ax = plt.subplots()
+plt.subplots_adjust(left=0.1, bottom=0.25)
+t0_index = find_index(time_delay, 0)
+
+peak_pr_only = np.mean(peaks[0:3])
+lambda0 = peak_pr_only
+pr_only_w = np.ones(10)*lambda0
+pr_only = np.linspace(0,1,len(pr_only_w))
+
+
+def f(x, t):
+    return (0.5*np.exp(-20*(x - t)**2) * np.cos(100 * (x - t)))**2*np.sign(-t)
+
+
+theta = np.pi / 10
+
+t0 = time_delay[t0_index]
+if(t0<=0):
+    x = np.linspace(-50, 0, 10001)
+    y = f(x, t0)
+    xp = np.cos(theta) * x + np.sin(theta) * y
+    yp = -np.sin(theta) * x + np.cos(theta) * y
+else:
+    x = np.linspace(0, 50, 10001)
+    y = f(x, t0)
+    xp = np.cos(theta) * x + np.sin(theta) * y
+    yp = -np.sin(theta) * x + np.cos(theta) * y
+    
+
+line1, = plt.plot(wavelength, raw_data_arr[t0_index], 'b-', lw=2, label="raw data")
+line2, = plt.plot(wavelength, fit_I_arr[t0_index], lw=0.5, color='k', label="Fit")
+line3,  = plt.plot(pr_only_w, pr_only,  'g--' ,lw=1, label= "pr_only")
+line, = plt.plot(xp+lambda0, yp+200, lw=0.5, color='red')
+
+# Create an inset axis in the top-left corner for the image
+# img = plt.imread("D:\\for ppt\\6e18 energy plot.png")
+# inset_ax = fig.add_axes([0.1, 0.45, 0.3, 0.4])  # Adjust position and size as needed
+# inset_ax.imshow(img, aspect='auto')
+# inset_ax.axis('off')  # Hide the axis for the inset image
+
+plt.legend()
+#ax.set_aspect('equal', adjustable='box')
+axcolor = 'lightgoldenrodyellow'
+ax.set_xlim(412, 415)
+ax.set_ylim(-0.2,1.2)
+
+ax.set_xlabel("wavelength (nm)")
+ax.set_ylabel("Normalized Intensity")
+ax.grid(lw=0.2,color="k")
+
+# Create slider for t
+ax_t = plt.axes([0.1, 0.1, 0.8, 0.03], facecolor=axcolor)
+slider_t = Slider(ax_t, 'delay', valmin=0, valmax=len(time_delay)-1, valinit=t0_index, valstep=1)
+
+# Set up colormap normalization from -50 to 50
+norm = Normalize(vmin=min(peaks), vmax=max(peaks))
+colormap = plt.cm.jet  # Use the 'jet' colormap for the desired color transition
+
+def update(val):
+    delay_index = slider_t.val
+    peak = peaks[delay_index]
+
+    # Update line data
+    line1.set_xdata(wavelength)
+    line1.set_ydata(raw_data_arr[delay_index])
+    
+    line2.set_xdata(wavelength)
+    line2.set_ydata(fit_I_arr[delay_index])
+    
+    t = time_delay[delay_index]
+    if(t<0):
+        x = np.linspace(-50, 0, 10001)
+        y = f(x, t)
+        xp = np.cos(theta) * x + np.sin(theta) * y
+        yp = -np.sin(theta) * x + np.cos(theta) * y
+    else:
+        x = np.linspace(0, 50, 10001)
+        y = f(x, t)
+        xp = np.cos(theta) * x + np.sin(theta) * y
+        yp = np.sin(theta) * x - np.cos(theta) * y
+        
+    line.set_ydata(yp)
+    line.set_xdata(xp+lambda0)
+    
+    # Update line color based on the slider value
+    color = colormap(norm(peak))  # Get color from colormap
+    line1.set_color(color)
+    line2.set_color("k")
+
+    ax.set_title(r"Spectrum for I = $6\times 10^{18} W/cm^2$"+f"\nspectrum at delay: {time_delay[delay_index]:.2f} ps;  peak wavelength: {peak:.3f} nm")
+    ax.set_xlabel("wavelength (nm)")
+    ax.set_ylabel("Normalized Intensity")
+
+    # Update the legend to reflect the new color of line1
+    ax.legend([line1, line2, line3], ["Raw Data", "Fit", "pr_only"])
+    fig.canvas.draw_idle()
+
+slider_t.on_changed(update)
+
+plt.show()
