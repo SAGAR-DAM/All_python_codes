@@ -808,7 +808,6 @@ print(model)
 
 
 
-
 ###########################################################################################
 #  Torchpipeline for CUDA
 # (Will work as Torchpipeline for CPU if CUDA is not available)

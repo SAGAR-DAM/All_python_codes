@@ -20,8 +20,10 @@ from skimage.transform import resize
 from copy import deepcopy
 from tqdm import tqdm
 from mpl_toolkits.mplot3d import Axes3D
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 import plotly.graph_objects as go
 from mayavi import mlab
+
 
 
 # %%
@@ -159,7 +161,13 @@ class Simulationbox2d:
     def show_geoemtry(self,imshow=True):
         if(imshow):
             plt.imshow(self.geometry, origin='lower', cmap="jet", extent=[0, self.box_x, 0, self.box_y]) 
-        plt.colorbar()  
+        plt.title("Simulator geometry")
+        plt.xlabel("x")
+        plt.ylabel("y")
+        ax = plt.gca()
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="5%", pad=0.05)
+        plt.colorbar(ax.images[0], cax=cax)
         plt.show()
 
         
@@ -205,18 +213,22 @@ class Simulationbox2d:
         self.Ex = -np.diff(self.potential,axis=1)/self.dx
         self.Ey = -np.diff(self.potential,axis=0)/self.dy
 
-    def plot_potential(self,imshow=True,contourplot=True,linecontourplot=True):
+    def plot_potential(self,imshow=True,contourplot=True,linecontourplot=True,colorbar=True,lw=1,levels=20):
         if(not self.solved):
             self.solve(max_iterations=1000)
-        
+            
+        if(contourplot):
+            contour = plt.contourf(self.xx, self.yy, self.potential, levels=200,cmap="jet")
+        if(linecontourplot):
+            contours = plt.contour(self.xx, self.yy, self.potential, levels=levels, colors='black', linewidths=lw, linestyles='solid')
         if(imshow):
             plt.imshow(self.potential, origin='lower', cmap="jet", extent=[0, self.box_x, 0, self.box_y])
-        if(contourplot):
-            contour = plt.contourf(self.xx, self.yy, self.potential, levels=200, cmap="jet")
-        if(linecontourplot):
-            contours = plt.contour(self.xx, self.yy, self.potential, levels=50, colors='black', linewidths=0.4, linestyles='solid')
-
-        plt.title("Potential distribution")
+            plt.title("Potential distribution\n(black lines are equipotential lines)")
+            if(colorbar):
+                ax = plt.gca()
+                divider = make_axes_locatable(ax)
+                cax = divider.append_axes("right", size="5%", pad=0.05)
+                plt.colorbar(ax.images[0], cax=cax)
         plt.show()
 
     def plot_electric_field(self,stepx=10,stepy=10,scale=50,remove_singularity=0,
@@ -259,49 +271,77 @@ class Simulationbox2d:
 
         self.electric_field()
         
-    def plot_Ex_Ey_E_separately(self,plot_Ex=False,plot_Ey=False,plot_mod_E=False,cmap="jet",logscale=False,colorbar=False):
+    def plot_Ex_Ey_E_separately(self,plot_Ex=False,plot_Ey=False,plot_mod_E=False,remove_singularity_Ex=0,remove_singularity_Ey=0,remove_singularity_mod_E=0, cmap="jet",logscale=False,colorbar=False):
         self.electric_field()
         magnitude = np.sqrt((self.Ex[0:-1,:])**2 + (self.Ey[:,0:-1])**2)
         
+        if(remove_singularity_Ex!=0):
+            for i in range(remove_singularity_Ex):
+                max_index = np.argmax(np.abs(self.Ex))
+                multi_idx = np.unravel_index(max_index, self.Ex.shape)
+                self.Ex[multi_idx[0],multi_idx[1]]=0
+                
+        if(remove_singularity_Ey!=0):
+            for i in range(remove_singularity_Ey):
+                max_index = np.argmax(np.abs(self.Ey))
+                multi_idx = np.unravel_index(max_index, self.Ey.shape)
+                self.Ey[multi_idx[0],multi_idx[1]]=0
+        
+        if(remove_singularity_mod_E!=0):
+            for i in range(remove_singularity_mod_E):
+                max_index = np.argmax(magnitude)
+                multi_idx = np.unravel_index(max_index, magnitude.shape)
+                magnitude[multi_idx[0],multi_idx[1]]=0
+                
         if(plot_Ex):
             if(logscale):
-                plt.imshow(np.log(np.abs(self.Ex)),cmap=cmap,extent=[0, self.box_x, 0, self.box_y])
+                plt.imshow(np.log(np.abs(self.Ex)),origin="lower",cmap=cmap,extent=[0, self.box_x, 0, self.box_y])
                 plt.title("log(|Ex|)")
             if(not logscale):
-                plt.imshow(self.Ex,cmap=cmap,extent=[0, self.box_x, 0, self.box_y])
+                plt.imshow(self.Ex,origin="lower",cmap=cmap,extent=[0, self.box_x, 0, self.box_y])
                 plt.title("Ex")
-            if(colorbar):
-                plt.colorbar()
             plt.xlabel("x")
             plt.ylabel("y")
+            if(colorbar):
+                ax = plt.gca()
+                divider = make_axes_locatable(ax)
+                cax = divider.append_axes("right", size="5%", pad=0.05)
+                plt.colorbar(ax.images[0], cax=cax)
             plt.show()
                 
         if(plot_Ey):
             if(logscale):
-                plt.imshow(np.log(np.abs(self.Ey)),cmap=cmap,extent=[0, self.box_x, 0, self.box_y])
+                plt.imshow(np.log(np.abs(self.Ey)),origin="lower",cmap=cmap,extent=[0, self.box_x, 0, self.box_y])
                 plt.title("log(|Ey|)")
             if(not logscale):
-                plt.imshow(self.Ey,cmap=cmap,extent=[0, self.box_x, 0, self.box_y])
+                plt.imshow(self.Ey,origin="lower",cmap=cmap,extent=[0, self.box_x, 0, self.box_y])
                 plt.title("Ey")
-            if(colorbar):
-                plt.colorbar()
             plt.xlabel("x")
             plt.ylabel("y")
+            if(colorbar):
+                ax = plt.gca()
+                divider = make_axes_locatable(ax)
+                cax = divider.append_axes("right", size="5%", pad=0.05)
+                plt.colorbar(ax.images[0], cax=cax)
             plt.show()
                 
         if(plot_mod_E):
             if(logscale):
-                plt.imshow(np.log(magnitude),cmap=cmap,extent=[0, self.box_x, 0, self.box_y])
+                plt.imshow(np.log(magnitude),origin="lower",cmap=cmap,extent=[0, self.box_x, 0, self.box_y])
                 plt.title("log(|E|)")
             if(not logscale):
-                plt.imshow(magnitude,cmap=cmap,extent=[0, self.box_x, 0, self.box_y])
+                plt.imshow(magnitude,origin="lower",cmap=cmap,extent=[0, self.box_x, 0, self.box_y])
                 plt.title("|E|")
-            if(colorbar):
-                plt.colorbar()
             plt.xlabel("x")
             plt.ylabel("y")
+            if(colorbar):
+                ax = plt.gca()
+                divider = make_axes_locatable(ax)
+                cax = divider.append_axes("right", size="5%", pad=0.05)
+                plt.colorbar(ax.images[0], cax=cax)
             plt.show()
-
+            
+            self.electric_field()
 
 
 # %%
