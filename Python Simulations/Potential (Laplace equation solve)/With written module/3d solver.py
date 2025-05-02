@@ -19,7 +19,7 @@ mpl.rcParams['figure.dpi'] = 100  # highres display
 
 
 # Create simulation box and add all geometries
-box = SimulationBox3D(resolution_x=100,resolution_y=50,resolution_z=50,    # resolutions of grid along corresponding axis
+box = SimulationBox3D(resolution_x=200,resolution_y=100,resolution_z=100,    # resolutions of grid along corresponding axis
                       box_x=2, box_y=1, box_z=1,    # Box side lengths 
                       potential_offset = 0)
 
@@ -44,7 +44,8 @@ box.add_cylinder(base_center=(1,0.5,0),radius=0.1,axis="z",potential=1,height=1)
 
 
 # Solve potential field
-box.solve(max_iter=100, tol=1e-4, method='gauss-seidel', verbose=True)
-box.plot_potential_density()
-box.plot_electric_field_3d()
+# box.solve(max_iter=100, tol=1e-4, method='gauss-seidel', verbose=True)
+# box.plot_potential_density()
+# box.plot_electric_field_3d()
 
+box.show_geometry()

@@ -107,9 +107,12 @@ class Simulationbox2d:
             self.fixed_mask[:, 0] = True
             self.fixed_mask[:, -1] = True
 
+        self.geometry = self.potential.copy()
+
     def add_polygon_plate(self, poly):
         mask = poly.generate_mask(self.xx, self.yy)
         self.potential[mask] = poly.potential
+        self.geometry[mask] = poly.potential
         self.fixed_mask[mask] = True
 
 
@@ -126,6 +129,7 @@ class Simulationbox2d:
         distance = np.sqrt((self.xx - cx)**2 + (self.yy - cy)**2)
         mask = distance <= radius
         self.potential[mask] = potential
+        self.geometry[mask] = potential
         self.fixed_mask[mask] = True
 
 
@@ -149,7 +153,14 @@ class Simulationbox2d:
 
         # Apply potential and fix those positions
         self.potential[mask] = potential
+        self.geometry[mask] = potential
         self.fixed_mask[mask] = True
+
+    def show_geoemtry(self,imshow=True):
+        if(imshow):
+            plt.imshow(self.geometry, origin='lower', cmap="jet", extent=[0, self.box_x, 0, self.box_y]) 
+        plt.colorbar()  
+        plt.show()
 
         
     def solve(self, max_iterations=10000, tolerance=1e-4):
@@ -292,8 +303,8 @@ class Simulationbox2d:
             plt.show()
 
 
-# %%
 
+# %%
 
 class SimulationBox3D:
     def __init__(self, resolution_x=50, resolution_y=50, resolution_z=50,
@@ -319,12 +330,14 @@ class SimulationBox3D:
         )
         self.solved = False
         self.potential = np.full_like(self.x, potential_offset, dtype=float)
+        self.geometry = self.potential.copy()
         self.fixed_mask = np.zeros_like(self.potential, dtype=bool)
 
     def add_sphere(self, center, radius, potential=0):
         cx, cy, cz = center
         mask = ((self.x - cx)**2 + (self.y - cy)**2 + (self.z - cz)**2) <= radius**2
         self.potential[mask] = potential
+        self.geometry[mask] = potential
         self.fixed_mask[mask] = True
 
     def add_box(self, x_bounds, y_bounds, z_bounds, potential=0):
@@ -335,6 +348,7 @@ class SimulationBox3D:
                 (self.y >= y0) & (self.y <= y1) &
                 (self.z >= z0) & (self.z <= z1))
         self.potential[mask] = potential
+        self.geometry[mask] = potential
         self.fixed_mask[mask] = True
 
     def add_cylinder(self, base_center, radius, height, axis='z', potential=0):
@@ -351,6 +365,7 @@ class SimulationBox3D:
         else:
             raise ValueError("axis must be 'x', 'y', or 'z'")
         self.potential[mask] = potential
+        self.geometry[mask] = potential
         self.fixed_mask[mask] = True
 
     def add_hollow_pipe(self, base_center, radius, thickness, height, axis='z', potential=0):
@@ -370,6 +385,7 @@ class SimulationBox3D:
         else:
             raise ValueError("axis must be 'x', 'y', or 'z'")
         self.potential[mask] = potential
+        self.geometry[mask] = potential
         self.fixed_mask[mask] = True
 
     def add_ellipsoid(self, center, radii, potential=0):
@@ -377,6 +393,7 @@ class SimulationBox3D:
         rx, ry, rz = radii
         mask = (((self.x - cx)/rx)**2 + ((self.y - cy)/ry)**2 + ((self.z - cz)/rz)**2 <= 1)
         self.potential[mask] = potential
+        self.geometry[mask] = potential
         self.fixed_mask[mask] = True
 
     def add_hyperboloid(self, center, coeffs, waist=1, axis="z", potential=0):
@@ -390,6 +407,7 @@ class SimulationBox3D:
             mask = (((self.x - cx)/a)**2 + ((self.y - cy)/b)**2 - ((self.z - cz)/c)**2 <= waist**2)
 
         self.potential[mask] = potential
+        self.geometry[mask] = potential
         self.fixed_mask[mask] = True
 
     def add_plane(self, coefficients, thickness=0.01, potential=0):
@@ -398,7 +416,29 @@ class SimulationBox3D:
         distance = (A * self.x + B * self.y + C * self.z + D) / norm
         mask = np.abs(distance) <= thickness / 2
         self.potential[mask] = potential
+        self.geometry[mask] = potential
         self.fixed_mask[mask] = True
+
+    def show_geometry(self,contours=50,opacity=0.4,cmap="jet"):
+        nx, ny, nz = self.resolution_x, self.resolution_y, self.resolution_z
+        lx, ly, lz = self.box_x, self.box_y, self.box_z
+
+        # Create coordinate grid
+        x, y, z = np.mgrid[
+            0:lx:nx*1j,
+            0:ly:ny*1j,
+            0:lz:nz*1j
+        ]
+
+        mlab.figure(bgcolor=(1, 1, 1), size=(800, 600))
+        mlab.contour3d(x, y, z, self.geometry, contours=contours, opacity=opacity, colormap=cmap)
+        axes = mlab.axes(xlabel='X', ylabel='Y', zlabel='Z',color=(1.0,0.0,0.0))
+        mlab.colorbar(title="potential", orientation='vertical')
+        axes.title_text_property.color = (1.0, 0.0, 0.0)  # red title text (if titles used)
+        axes.label_text_property.color = (1.0, 0.0, 0.0)  # blue label text
+        mlab.title("3D Isosurface of Potential")
+        mlab.show()
+
 
     def solve(self, max_iter=1000, tol=1e-4, method='jacobi', verbose=False):
         V = self.potential.copy()
@@ -468,9 +508,9 @@ class SimulationBox3D:
         if (not self.solved):
             self.solve(max_iter=300)
         # Create physical axes
-        x = np.linspace(0, self.self_x, self.resolution_x)
-        y = np.linspace(0, self.self_y, self.resolution_y)
-        z = np.linspace(0, self.self_z, self.resolution_z)
+        x = np.linspace(0, self.box_x, self.resolution_x)
+        y = np.linspace(0, self.box_y, self.resolution_y)
+        z = np.linspace(0, self.box_z, self.resolution_z)
         x, y, z = np.meshgrid(x, y, z, indexing='ij')  # Match shape with potential
 
         # Setup the scalar field for volumetric rendering
@@ -531,6 +571,17 @@ class SimulationBox3D:
         self.Ex = self.Ex[::stepx, ::stepy, ::stepz]
         self.Ey = self.Ey[::stepx, ::stepy, ::stepz]
         self.Ez = self.Ez[::stepx, ::stepy, ::stepz]
+
+        # print(X.shape)
+        # print(Y.shape)
+        # print(Z.shape)
+
+        # print(self.Ex.shape)
+        # print(self.Ey.shape)
+        # print(self.Ez.shape)
+
+        # Scalars for coloring
+        # scalars = magnitude if color_by_magnitude else None
 
         # Plot with Mayavi
         mlab.figure(bgcolor=(1, 1, 1))
