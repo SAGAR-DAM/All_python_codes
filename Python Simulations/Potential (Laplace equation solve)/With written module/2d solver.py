@@ -26,8 +26,8 @@ sim = Simulationbox2d(resolution_x=801, resolution_y=401, box_x=2, box_y=1,
 sim.add_disk_plate(center=(0.5,0.52277),radius=0.2,potential=100)
 sim.add_disk_plate(center=(1.5,0.52277),radius=0.2,potential=-100)
 
-sim.add_polygon_plate(poly=polygon_plate(edges=[(0.1,0.21777),(0.1,0.22777),(1.9,0.22777),(1.9,0.21777)],potential=100))
-sim.add_polygon_plate(poly=polygon_plate(edges=[(0.1,0.81777),(0.1,0.82777),(1.9,0.82777),(1.9,0.81777)],potential=-100))
+sim.add_polygon_plate(poly=polygon_plate(edges=[(0.0,0.21777),(0.0,0.22777),(2.0,0.22777),(2.0,0.21777)],potential=100))
+sim.add_polygon_plate(poly=polygon_plate(edges=[(0.0,0.81777),(0.0,0.82777),(2.0,0.82777),(2.0,0.81777)],potential=-100))
 
 sim.show_geoemtry()
 sim.solve(max_iterations=2000)
@@ -107,4 +107,18 @@ sim.plot_potential(lw=0.4,levels=50)
 sim.plot_electric_field(stepx=5,stepy=5,scale=5,remove_singularity=2000)
 sim.plot_Ex_Ey_E_separately(plot_Ex=True,plot_Ey=True,plot_mod_E=True,colorbar=True,logscale=True)
 sim.plot_Ex_Ey_E_separately(plot_Ex=True,plot_Ey=True,plot_mod_E=True,remove_singularity_Ex=100,remove_singularity_Ey=100,remove_singularity_mod_E=100,colorbar=True,logscale=False)
+
+# %%
+
+Ex = sim.Ex[:-1,:]
+Ey = sim.Ey[:,:-1]
+
+# Plot the results
+plt.streamplot(sim.xx[:-1,:-1], sim.yy[:-1,:-1], Ex, Ey, density=3,color="k")
+plt.title("Magnetic Field from Bar Magnet")
+plt.xlabel("x")
+plt.ylabel("y")
+plt.colorbar(label='Field Strength')
+plt.show()
+
 
