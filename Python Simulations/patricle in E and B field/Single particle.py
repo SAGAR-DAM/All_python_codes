@@ -78,7 +78,7 @@ class particle():
         for i in range(len(t)):
             Fx = self.q*(Ex+(self.vy*Bz-self.vz*By))
             Fy = self.q*(Ey+(self.vz*Bx-self.vx*Bz))
-            Fz = self.q*(Ez+(self.vx*By-self.vy*Bz))
+            Fz = self.q*(Ez+(self.vx*By-self.vy*Bx))
 
             ax,ay,az = Fx/self.m, Fy/self.m, Fz/self.m
 
