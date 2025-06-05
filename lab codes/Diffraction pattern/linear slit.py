@@ -15,9 +15,9 @@ mpl.rcParams['figure.dpi'] = 300  # highres display
 wavelength = 800 * nm  # 500 nm (green light)
 
 # Define the slit grating parameters
-slit_width = 100 * um  # Width of each slit
-grating_period = 1000 * um  # Distance between the centers of adjacent slits
-num_slits = 3  # Number of slits
+slit_width = 10 * um  # Width of each slit
+grating_period = 80 * um  # Distance between the centers of adjacent slits
+num_slits = 50  # Number of slits
 
 # Define the slit function
 def slit_grating(x, y, wavelength):
@@ -47,7 +47,7 @@ aperture = ApertureFromFunction(slit_grating)
 field.add(aperture)
 
 # Propagate the field to a certain distance
-field.propagate(2 * cm)
+field.propagate(100 * cm)
 
 
 # Create the aperture pattern

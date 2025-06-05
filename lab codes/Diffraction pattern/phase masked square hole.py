@@ -18,12 +18,12 @@ wavelength = 800 * nm  # 500 nm (green light)
 # Define the square hole grating parameters
 hole_side_length_x = 26 * um  # Side length of each square hole along x-axis
 hole_side_length_y = 26 * um   # Side length of each square hole along y-axis
-num_holes_x = 16  # Number of holes along x-axis
-num_holes_y = 16  # Number of holes along y-axis
+num_holes_x = 12  # Number of holes along x-axis
+num_holes_y = 12  # Number of holes along y-axis
 grid_period_x = 39 * um  # Spacing between holes along x-axis
 grid_period_y = 39 * um  # Spacing between holes along y-axis
 
-distance = 1   # in cm
+distance = 100   # in cm
 phase_ret = 1*np.pi   # give the phase change on phase masked area...
 
 # Define the square hole function

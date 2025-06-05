@@ -1,14 +1,15 @@
 from diffractsim import MonochromaticField, ApertureFromFunction, mm, cm, nm, um
 import numpy as np
 import matplotlib.pyplot as plt
-
+from Curve_fitting_with_scipy import Linefitting as lft
 import matplotlib as mpl
+import types
 
 mpl.rcParams['font.family'] = 'serif'
 mpl.rcParams['font.serif'] = 'Times New Roman'
 mpl.rcParams['font.size'] = 12
-#mpl.rcParams['font.weight'] = 'bold'
-#mpl.rcParams['font.style'] = 'italic'  # Set this to 'italic'
+mpl.rcParams['font.weight'] = 'bold'
+mpl.rcParams['font.style'] = 'italic'  # Set this to 'italic'
 mpl.rcParams['figure.dpi'] = 300  # highres display
 
 # Define the wavelength of the light
@@ -17,8 +18,8 @@ wavelength = 500 * nm  # 500 nm (green light)
 # Define the square hole grating parameters
 hole_side_length_x = 100 * um  # Side length of each square hole along x-axis
 hole_side_length_y = 100 * um   # Side length of each square hole along y-axis
-num_holes_x = 30  # Number of holes along x-axis
-num_holes_y = 30  # Number of holes along y-axis
+num_holes_x = 3  # Number of holes along x-axis
+num_holes_y = 3  # Number of holes along y-axis
 grid_period_x = 200 * um  # Spacing between holes along x-axis
 grid_period_y = 200 * um  # Spacing between holes along y-axis
 
@@ -63,16 +64,14 @@ field.add(aperture)
 
 # Propagate the field to a certain distance
 field.propagate(5 * cm)
+field.plot_intensity(field.get_intensity())
 
 
-# Compute the intensity of the propagated field
-intensity = field.get_intensity()
-
-# Plot the intensity pattern
-plt.figure()
-plt.imshow(intensity, extent=(x.min()/mm, x.max()/mm, y.min()/mm, y.max()/mm), cmap='inferno')
-plt.title('Diffraction Pattern')
-plt.xlabel('x (mm)')
-plt.ylabel('y (mm)')
-plt.colorbar(label='Intensity')
-plt.show()
+__del_vars__ = []
+for __var__ in dir():
+    if not __var__.startswith("_") and not callable(locals()[__var__]) and not isinstance(locals()[__var__], types.ModuleType):
+        __del_vars__.append(__var__)
+        exec("del "+ __var__)
+    del __var__
+    
+print(__del_vars__)

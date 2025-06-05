@@ -19,7 +19,10 @@ def copy_selected_files(src, dst, extensions=(".py", ".ipynb", ".cpp", ".c", "f7
                 shutil.copy2(os.path.join(root, file), os.path.join(dest_dir, file))
 
 # Example usage:
-source = r"D:\data Lab"
-destination = r"D:\All lab codes"
+# source = r"D:\data Lab"
+# destination = r"D:\All lab codes"
+
+source = r"D:\temporary backup\Codes"
+destination = r"D:\Codes"
 
 copy_selected_files(source, destination)

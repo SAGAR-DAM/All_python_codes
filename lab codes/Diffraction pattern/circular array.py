@@ -77,26 +77,4 @@ field.add(aperture)
 # Propagate the field to a certain distance
 field.propagate(80 * cm)
 
-# Compute the intensity of the propagated field
-intensity = field.get_intensity()
-intensity /= np.max(intensity)
-
-# Visualize the field intensity
-field.plot_intensity(intensity)
-
-I_line = intensity[(intensity.shape[1])//2,:]
-I_line /= max(I_line)
-plt.plot(field.xx[0,:]/mm,I_line,'r-',lw=0.5)
-plt.title("Intenasity variation across screen centre")
-plt.xlabel("x (mm)")
-plt.ylabel(r"I$_{norm}$   (Arb unit)")
-plt.show()
-
-phase = get_phase(field.E)
-#phase = np.unwrap(phase,discont=2*np.pi,axis=0)#np.unwrap(np.unwrap(phase,discont=np.pi,axis=1),discont=np.pi,axis=0)
-plt.imshow(phase,extent=(x.min()/mm, x.max()/mm, y.min()/mm, y.max()/mm),cmap="jet")
-plt.title("Phase pattern on screen")
-plt.xlabel('x (mm)')
-plt.ylabel('y (mm)')
-plt.colorbar(label='phase (rad)')
-plt.show()
+field.plot_intensity(field.get_intensity())

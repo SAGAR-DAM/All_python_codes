@@ -25,7 +25,7 @@ for i in range(sample):
 dist=np.array(dist)
 dist=(dist-np.mean(dist))/np.std(dist)
 
-plt.hist(dist,bins=50,density=True)
+plt.hist(dist,bins=50,density=True,color="g",edgecolor="black")
 x = np.linspace(-4, 4, 1000)
 plt.plot(x, norm.pdf(x, 0, 1), 'r-', label='Standard Normal $N(0,1)$')
 plt.show()
